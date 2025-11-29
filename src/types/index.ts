@@ -12,6 +12,7 @@ export interface Issue {
   updated_at: string;
   created_at?: string;
   url?: string;
+  status_column?: string;
 }
 
 export interface CSVRow {
@@ -21,6 +22,7 @@ export interface CSVRow {
   state: 'open' | 'closed';
   labels: string;
   updated_at: string;
+  status_column?: string;
 }
 
 export interface SyncConfig {
@@ -28,6 +30,13 @@ export interface SyncConfig {
   githubOwner: string;
   githubRepo: string;
   csvFilePath: string;
+  dedupeTitleCaseSensitive?: boolean;
+  dedupeTieBreaker?: 'first' | 'prefer_csv' | 'prefer_github' | 'highest_id';
+  dedupeDeleteOnGithub?: boolean;
+  dedupeDryRun?: boolean;
+  dedupeCloseBatchSize?: number;
+  githubProjectNumber?: number;
+  syncProjectStatus?: boolean;
 }
 
 export interface SyncResult {
@@ -37,6 +46,9 @@ export interface SyncResult {
   githubIssuesUpdated: number;
   githubIssuesSkipped: number;
   deletedRowsMarked: number;
+  removedDuplicates?: number;
+  githubDuplicatesClosed?: number;
+  githubDuplicatePreviewPath?: string;
   errors: string[];
 }
 

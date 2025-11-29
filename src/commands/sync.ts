@@ -4,6 +4,7 @@
 
 import { loadConfig } from '../config/index.js';
 import { GitHubClient } from '../github/client.js';
+import { GitHubProjectsClient } from '../github/projects.js';
 import { SyncEngine } from '../sync/syncEngine.js';
 import { logger } from '../utils/logger.js';
 
@@ -17,7 +18,27 @@ export async function runSync(): Promise<void> {
       config.githubOwner,
       config.githubRepo
     );
-    const syncEngine = new SyncEngine(githubClient, config.csvFilePath);
+
+    // Initialize projects client if project sync is enabled
+    let projectsClient: GitHubProjectsClient | undefined;
+    if (config.syncProjectStatus) {
+      projectsClient = new GitHubProjectsClient(
+        config.githubToken,
+        config.githubOwner,
+        config.githubRepo,
+        config.githubProjectNumber
+      );
+    }
+
+    const syncEngine = new SyncEngine(githubClient, config.csvFilePath, {
+      dedupeTitleCaseSensitive: config.dedupeTitleCaseSensitive,
+      dedupeTieBreaker: config.dedupeTieBreaker,
+      dedupeDeleteOnGithub: config.dedupeDeleteOnGithub,
+      dedupeDryRun: config.dedupeDryRun,
+      dedupeCloseBatchSize: config.dedupeCloseBatchSize,
+      projectsClient,
+      syncProjectStatus: config.syncProjectStatus,
+    });
 
     await syncEngine.sync();
   } catch (error) {
@@ -35,7 +56,27 @@ export async function runPush(): Promise<void> {
       config.githubOwner,
       config.githubRepo
     );
-    const syncEngine = new SyncEngine(githubClient, config.csvFilePath);
+
+    // Initialize projects client if project sync is enabled
+    let projectsClient: GitHubProjectsClient | undefined;
+    if (config.syncProjectStatus) {
+      projectsClient = new GitHubProjectsClient(
+        config.githubToken,
+        config.githubOwner,
+        config.githubRepo,
+        config.githubProjectNumber
+      );
+    }
+
+    const syncEngine = new SyncEngine(githubClient, config.csvFilePath, {
+      dedupeTitleCaseSensitive: config.dedupeTitleCaseSensitive,
+      dedupeTieBreaker: config.dedupeTieBreaker,
+      dedupeDeleteOnGithub: config.dedupeDeleteOnGithub,
+      dedupeDryRun: config.dedupeDryRun,
+      dedupeCloseBatchSize: config.dedupeCloseBatchSize,
+      projectsClient,
+      syncProjectStatus: config.syncProjectStatus,
+    });
 
     await syncEngine.sync();
   } catch (error) {
@@ -53,7 +94,27 @@ export async function runPull(): Promise<void> {
       config.githubOwner,
       config.githubRepo
     );
-    const syncEngine = new SyncEngine(githubClient, config.csvFilePath);
+
+    // Initialize projects client if project sync is enabled
+    let projectsClient: GitHubProjectsClient | undefined;
+    if (config.syncProjectStatus) {
+      projectsClient = new GitHubProjectsClient(
+        config.githubToken,
+        config.githubOwner,
+        config.githubRepo,
+        config.githubProjectNumber
+      );
+    }
+
+    const syncEngine = new SyncEngine(githubClient, config.csvFilePath, {
+      dedupeTitleCaseSensitive: config.dedupeTitleCaseSensitive,
+      dedupeTieBreaker: config.dedupeTieBreaker,
+      dedupeDeleteOnGithub: config.dedupeDeleteOnGithub,
+      dedupeDryRun: config.dedupeDryRun,
+      dedupeCloseBatchSize: config.dedupeCloseBatchSize,
+      projectsClient,
+      syncProjectStatus: config.syncProjectStatus,
+    });
 
     await syncEngine.sync();
   } catch (error) {

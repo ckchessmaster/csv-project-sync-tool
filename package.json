@@ -12,6 +12,8 @@
     "push": "node dist/index.js push",
     "pull": "node dist/index.js pull",
     "watch": "ts-node src/index.ts watch",
+    "bump-timestamps": "node scripts/bump_timestamps.js",
+    "bump-status": "node scripts/bump_status.js",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist"
   },

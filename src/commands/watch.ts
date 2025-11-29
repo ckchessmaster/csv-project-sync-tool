@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { loadConfig } from '../config/index.js';
 import { GitHubClient } from '../github/client.js';
+import { GitHubProjectsClient } from '../github/projects.js';
 import { SyncEngine } from '../sync/syncEngine.js';
 import { logger } from '../utils/logger.js';
 import { sleep } from '../utils/helpers.js';
@@ -23,7 +24,27 @@ export async function runWatch(): Promise<void> {
       config.githubOwner,
       config.githubRepo
     );
-    const syncEngine = new SyncEngine(githubClient, config.csvFilePath);
+
+    // Initialize projects client if project sync is enabled
+    let projectsClient: GitHubProjectsClient | undefined;
+    if (config.syncProjectStatus) {
+      projectsClient = new GitHubProjectsClient(
+        config.githubToken,
+        config.githubOwner,
+        config.githubRepo,
+        config.githubProjectNumber
+      );
+    }
+
+    const syncEngine = new SyncEngine(githubClient, config.csvFilePath, {
+      dedupeTitleCaseSensitive: config.dedupeTitleCaseSensitive,
+      dedupeTieBreaker: config.dedupeTieBreaker,
+      dedupeDeleteOnGithub: config.dedupeDeleteOnGithub,
+      dedupeDryRun: config.dedupeDryRun,
+      dedupeCloseBatchSize: config.dedupeCloseBatchSize,
+      projectsClient,
+      syncProjectStatus: config.syncProjectStatus,
+    });
 
     let isWatching = false;
     let debounceTimer: NodeJS.Timeout | null = null;

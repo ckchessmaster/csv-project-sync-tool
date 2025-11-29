@@ -7,7 +7,7 @@ import path from 'path';
 import { stringify } from 'csv-stringify/sync';
 import { CSVRow } from '../types/index.js';
 
-const HEADERS = ['id', 'title', 'body', 'state', 'labels', 'updated_at'];
+const HEADERS = ['id', 'title', 'body', 'state', 'labels', 'updated_at', 'status_column'];
 
 export function writeCSV(filePath: string, rows: CSVRow[]): void {
   // Format rows for CSV output
@@ -18,6 +18,7 @@ export function writeCSV(filePath: string, rows: CSVRow[]): void {
     state: row.state,
     labels: row.labels,
     updated_at: row.updated_at,
+    status_column: row.status_column || 'todo',
   }));
 
   try {

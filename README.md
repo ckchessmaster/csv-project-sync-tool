@@ -115,6 +115,8 @@ The tool implements a 5-step synchronization algorithm:
 - Fetches all issues from GitHub repository with pagination
 - Validates CSV headers
 
+Deduplication: After loading CSV rows and GitHub issues, the sync engine performs a title-based deduplication pass. For each title, the tool keeps the item (CSV row or GitHub issue) with the newest `updated_at` timestamp and removes older duplicates from the consolidated CSV output. Configure matching case-sensitivity with `DEDUPE_TITLE_CASE_SENSITIVE` in your `.env`.
+
 ### Step 2: CSV → GitHub (Push Local Changes)
 
 For each CSV row:
@@ -168,6 +170,15 @@ GITHUB_REPO=your_repository_name
 
 # Local CSV file path
 CSV_FILE_PATH=./issues.csv
+
+# Deduplication: case-sensitive title matching (default: false)
+# If true, title matching is case-sensitive; otherwise case-insensitive.
+DEDUPE_TITLE_CASE_SENSITIVE=false
+
+# Tie-breaker for deduplication (optional)
+# Options: first | prefer_csv | prefer_github | highest_id
+# Default: first
+DEDUPE_TIE_BREAKER=first
 
 # Optional: Enable debug logging
 DEBUG=true

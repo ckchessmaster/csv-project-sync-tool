@@ -17,6 +17,71 @@ export class GitHubClient {
   }
 
   /**
+   * Delete an issue from GitHub (requires delete scope)
+   */
+  async deleteIssue(issueNumber: number): Promise<void> {
+    try {
+      // GitHub's REST API doesn't support deleting issues directly
+      // We need to use the GraphQL API
+      const mutation = `
+        mutation($issueId: ID!) {
+          deleteIssue(input: { issueId: $issueId }) {
+            repository {
+              id
+            }
+          }
+        }
+      `;
+
+      // First, get the issue's node ID
+      const issue = await this.octokit.issues.get({
+        owner: this.owner,
+        repo: this.repo,
+        issue_number: issueNumber,
+      });
+
+      await this.octokit.graphql(mutation, {
+        issueId: issue.data.node_id,
+      });
+    } catch (error: any) {
+      // If deletion fails due to permissions, fall back to closing
+      if (error.message && (error.message.includes('not found') || error.message.includes('Field \'deleteIssue\' doesn\'t exist'))) {
+        throw new Error(`Cannot delete issue #${issueNumber}: GitHub API doesn't support issue deletion. Issues can only be closed.`);
+      }
+      throw new Error(`Failed to delete issue #${issueNumber} on GitHub: ${error}`);
+    }
+  }
+
+  /**
+   * Close an existing issue and mark it as a duplicate (adds label and optional comment)
+   */
+  async closeIssueAsDuplicate(issueNumber: number, existingLabels: string[] = [], comment?: string): Promise<void> {
+    try {
+      const cleaned = (existingLabels || []).map((l) => (l || '').toString().trim()).filter((l) => l.length > 0);
+      const labels = Array.from(new Set([...(cleaned || []), 'duplicate']));
+      // Update issue state to closed and add duplicate label
+      await this.octokit.issues.update({
+        owner: this.owner,
+        repo: this.repo,
+        issue_number: issueNumber,
+        state: 'closed',
+        labels,
+      });
+
+      if (comment) {
+        await this.octokit.issues.createComment({
+          owner: this.owner,
+          repo: this.repo,
+          issue_number: issueNumber,
+          body: comment,
+        });
+      }
+    } catch (error) {
+      throw new Error(`Failed to close/label duplicate issue #${issueNumber} on GitHub: ${error}`);
+    }
+  }
+
+  /**
    * Fetch all issues from the repository with pagination
    */
   async fetchAllIssues(): Promise<GitHubIssue[]> {
