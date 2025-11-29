@@ -1,0 +1,5 @@
+id,title,body,state,labels,updated_at
+1,Add user authentication,Implement login system with JWT tokens,open,feature;backend,2025-01-15T10:30:00Z
+2,Fix header layout,CSS alignment issue in navigation header,closed,bug;frontend,2025-01-14T15:20:00Z
+3,Improve search functionality,Add filters and sorting options to search page,open,enhancement;frontend,2025-01-13T09:45:00Z
+,Auto-save feature,Implement automatic saving for draft posts,open,feature,2025-01-15T11:45:00Z
