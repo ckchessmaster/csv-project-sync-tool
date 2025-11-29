@@ -304,6 +304,76 @@ export class GitHubProjectsClient {
   }
 
   /**
+   * Get the current status of an issue in the project
+   * Returns the status column name, or null if not found
+   */
+  async getIssueStatus(issueNumber: number): Promise<string | null> {
+    const project = await this.getProjectInfo();
+    if (!project) {
+      return null;
+    }
+
+    const projectItemId = await this.getProjectItemId(issueNumber);
+    if (!projectItemId) {
+      return null;
+    }
+
+    // Find the Status field
+    const statusField = project.fields.find(
+      (f) => f.name.toLowerCase() === 'status' && f.options
+    );
+
+    if (!statusField || !statusField.options) {
+      return null;
+    }
+
+    try {
+      const query = `
+        query($itemId: ID!) {
+          node(id: $itemId) {
+            ... on ProjectV2Item {
+              fieldValueByName(name: "Status") {
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  name
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result: any = await this.octokit.graphql(query, {
+        itemId: projectItemId,
+      });
+
+      const statusName = result?.node?.fieldValueByName?.name;
+      return statusName || null;
+    } catch (error) {
+      logger.debug(`Failed to get project status for issue #${issueNumber}: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Batch get statuses for multiple issues
+   * Returns a map of issueNumber -> statusColumn
+   */
+  async batchGetIssueStatus(issueNumbers: number[]): Promise<Map<number, string>> {
+    const statusMap = new Map<number, string>();
+
+    for (const issueNumber of issueNumbers) {
+      const status = await this.getIssueStatus(issueNumber);
+      if (status) {
+        statusMap.set(issueNumber, status);
+      }
+      // Small delay to avoid rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    return statusMap;
+  }
+
+  /**
    * Batch update status for multiple issues
    */
   async batchUpdateIssueStatus(updates: Array<{ issueNumber: number; statusColumn: string }>): Promise<number> {

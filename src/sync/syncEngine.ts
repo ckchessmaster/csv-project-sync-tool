@@ -213,7 +213,7 @@ export class SyncEngine {
 
       // Step 3: GitHub -> CSV (Pull remote changes to local)
       logger.info('Step 3: Pulling GitHub changes to CSV...');
-      const step3Result = this.pullGitHubChangesToCsv(
+      const step3Result = await this.pullGitHubChangesToCsv(
         githubIssuesMap,
         csvRowsMap,
         consolidatedRows
@@ -351,17 +351,26 @@ export class SyncEngine {
   /**
    * Step 3: Pull GitHub changes to CSV
    */
-  private pullGitHubChangesToCsv(
+  private async pullGitHubChangesToCsv(
     githubIssuesMap: Map<number, GitHubIssue>,
     csvRowsMap: Map<string, CSVRow>,
     consolidatedRows: CSVRow[]
-  ): {
+  ): Promise<{
     created: number;
     updated: number;
     updatedRows: CSVRow[];
-  } {
+  }> {
     let created = 0;
     let updated = 0;
+
+    // Fetch project statuses for all GitHub issues if project sync is enabled
+    let projectStatusMap = new Map<number, string>();
+    if (this.projectsClient && this.syncProjectStatus) {
+      const issueNumbers = Array.from(githubIssuesMap.keys());
+      logger.info(`Fetching project status for ${issueNumbers.length} issues...`);
+      projectStatusMap = await this.projectsClient.batchGetIssueStatus(issueNumbers);
+      logger.info(`Fetched project status for ${projectStatusMap.size} issues`);
+    }
 
     for (const [issueNumber, githubIssue] of githubIssuesMap) {
       const csvRow = csvRowsMap.get(String(issueNumber));
@@ -369,6 +378,9 @@ export class SyncEngine {
       // Skip closed issues marked as duplicates - don't add them back to CSV
       const isDuplicate = githubIssue.state === 'closed' && 
                          githubIssue.labels.some(l => l.name.toLowerCase() === 'duplicate');
+      
+      // Get the project status for this issue
+      const projectStatus = projectStatusMap.get(issueNumber);
       
       if (!csvRow) {
         // Case 1: New remote issue not in CSV
@@ -378,7 +390,7 @@ export class SyncEngine {
         }
         
         logger.debug(`Adding new GitHub issue #${issueNumber} to CSV`);
-        const newRow = githubIssueToCsvRow(githubIssue);
+        const newRow = githubIssueToCsvRow(githubIssue, projectStatus);
         consolidatedRows.push(newRow);
         created++;
         logger.success(`Added GitHub issue #${issueNumber} to CSV`);
@@ -386,7 +398,7 @@ export class SyncEngine {
         // Case 2: Remote update (GitHub version is newer)
         if (isTimestampNewer(githubIssue.updated_at, csvRow.updated_at)) {
           logger.debug(`Updating CSV with GitHub issue #${issueNumber} changes`);
-          const updatedRow = githubIssueToCsvRow(githubIssue, csvRow.status_column);
+          const updatedRow = githubIssueToCsvRow(githubIssue, projectStatus);
           const rowIndex = consolidatedRows.findIndex(
             (r) => r.id === String(issueNumber)
           );
@@ -395,6 +407,20 @@ export class SyncEngine {
           }
           updated++;
           logger.success(`Updated CSV with GitHub issue #${issueNumber}`);
+        } else if (projectStatus && projectStatus !== csvRow.status_column) {
+          // Special case: Even if timestamps are equal, update status_column if it changed in the project
+          logger.debug(`Updating CSV with GitHub project status change for issue #${issueNumber}`);
+          const rowIndex = consolidatedRows.findIndex(
+            (r) => r.id === String(issueNumber)
+          );
+          if (rowIndex !== -1) {
+            consolidatedRows[rowIndex] = {
+              ...consolidatedRows[rowIndex],
+              status_column: projectStatus
+            };
+          }
+          updated++;
+          logger.success(`Updated CSV status_column for issue #${issueNumber} to "${projectStatus}"`);
         }
       }
     }
